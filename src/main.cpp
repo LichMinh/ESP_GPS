@@ -79,19 +79,26 @@ void processStatus() {
     if (gps.getLocation(lat, lng, sats)) {
         double distance = calculateDistance(HOME_LAT, HOME_LON, lat, lng);
         
-        String message = "GPS: " + String(sats) + " sats\n";
-        message += "📏 Distance: " + String(distance, 0) + "m\n";
-        message += (distance > GEOFENCE_RADIUS) ? "OUTSIDE safe zone" : "INSIDE safe zone";
+        String message;
+        if (distance > GEOFENCE_RADIUS) {
+            message = String(distance, 0) + "m from home - OUTSIDE safe zone";
+        } else {
+            message = String(distance, 0) + "m from home - INSIDE safe zone";
+        }
+        
+        // Ensure message is under 100 chars (SMS limit ~160, but target 100)
+        if (message.length() > 100) {
+            message = message.substring(0, 97) + "...";
+        }
         
         simManager.sendSMS(message);
     } else {
-        simManager.sendSMS("GPS: NO FIX");
+        simManager.sendSMS("GPS: No fix");
     }
     
     gps.powerOff();
     processingCommand = false;
 }
-
 // Command callback from SMS handler
 void onCommandReceived(const String& cmd) {
     if (processingCommand) return;
@@ -159,4 +166,4 @@ void loop() {
     
     delay(100);
 }
-// end of main.cpp.... không có được ...
+
