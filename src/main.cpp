@@ -159,4 +159,8 @@ void loop() {
     
     delay(100);
 }
+<<<<<<< HEAD
 // end of main.cpp.... không có được 
+=======
+// end of main.cpp.... hehe
+>>>>>>> 8fd2e9297e9e97837480170adc9a14c3e3203d0e
