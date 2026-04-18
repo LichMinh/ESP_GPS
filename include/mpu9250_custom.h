@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+#include "config.h"
 
 #define MPU9250_ADDRESS 0x68
 #define AK8963_ADDRESS 0x0C
@@ -51,7 +52,7 @@ private:
     
 public:
     MPU9250_Custom();
-    void begin(int sda = 21, int scl = 22);
+    void begin(int sda = MPU_SDA, int scl = MPU_SCL);
     void update();
     
     // Get raw values
