@@ -4,6 +4,10 @@
 #include "gps_manager.h"
 #include "sim_manager.h"
 #include "sms_handler.h"
+#include "mpu9250_custom.h"
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 // Serial objects
 HardwareSerial gpsSerial(2);
@@ -14,8 +18,17 @@ GPSManager gps;
 SIMManager simManager; 
 SMSHandler smsHandler;
 
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
+                        OLED_MOSI, OLED_CLK, OLED_DC, OLED_RST, OLED_CS);
+MPU9250_Custom mpu;
+
 bool processingCommand = false;
 unsigned long lastSMSCheck = 0;
+
+unsigned long lastDisplayUpdate = 0;
+int score = 5;
+unsigned long lastViolationTime = 0;
+bool warningSent = false;
 
 // Calculate distance between two coordinates
 double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -27,6 +40,69 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
                sin(dLon / 2) * sin(dLon / 2);
     double c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return R * c;
+}
+
+void updateDisplay() {
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    
+    // Display MPU data
+    display.print("Roll: ");
+    display.println(mpu.getRoll(), 1);
+    
+    display.print("Pitch: ");
+    display.println(mpu.getPitch(), 1);
+    
+    display.print("Score: ");
+    display.println(score);
+    
+    // Display GPS status if active
+    if (gps.isRunning()) {
+        display.print("GPS: ");
+        if (gps.hasFix()) {
+            display.println("Active");
+        } else {
+            display.println("Searching");
+        }
+    } else {
+        display.print("GPS: ");
+        display.println("Sleep");
+    }
+    
+    if (score == 0) {
+        display.setTextSize(2);
+        display.setCursor(10, 40);
+        display.print("WARNING!");
+        display.setTextSize(1);
+        
+        if (!warningSent && simManager.isSimReady()) {
+            simManager.sendSMS("WARNING: Score reached 0! Device violation detected!");
+            warningSent = true;
+        }
+    }
+    
+    display.display();
+}
+
+void checkViolation() {
+    float ax = mpu.getAx();
+    float ay = mpu.getAy();
+    
+    if ((ax > 0.5 || ax < -0.5 || abs(ay) > 0.5) &&
+        (millis() - lastViolationTime > 1000)) {
+        
+        if (score > 0) {
+            score--;
+            lastViolationTime = millis();
+            
+            if (simManager.isSimReady() && score >= 0) {
+                String msg = "Violation detected! Score: " + String(score);
+                simManager.sendSMS(msg);
+            }
+        }
+    }
 }
 
 // Process location request
@@ -44,6 +120,7 @@ void processLocation() {
     while (!gps.hasFix() && millis() - startTime < GPS_FIX_TIMEOUT) {
         gps.process();
         delay(100);
+        updateDisplay();
     }
     
     if (gps.getLocation(lat, lng, sats)) {
@@ -74,6 +151,7 @@ void processStatus() {
     while (!gps.hasFix() && millis() - startTime < GPS_FIX_TIMEOUT) {
         gps.process();
         delay(100);
+        updateDisplay();
     }
     
     if (gps.getLocation(lat, lng, sats)) {
@@ -97,6 +175,9 @@ void processStatus() {
     }
     
     gps.powerOff();
+    // Also send score status
+    String scoreMsg = "Current Score: " + String(score) + "/5";
+    simManager.sendSMS(scoreMsg);
     processingCommand = false;
 }
 // Command callback from SMS handler
@@ -109,7 +190,14 @@ void onCommandReceived(const String& cmd) {
         processLocation();
     } else if (cmd == "STATUS") {
         processStatus();
+    } 
+
+    else if (cmd == "SCORE") {
+        String scoreMsg = "Current Score: " + String(score) + "/5";
+        simManager.sendSMS(scoreMsg);
+        processingCommand = false;
     }
+    // ====================
 }
 
 void setup() {
@@ -117,6 +205,22 @@ void setup() {
     delay(1000);
     
     Serial.println("     GPS TRACKER - POWER SAVING MODE     ");
+
+      // Initialize OLED
+    if (!display.begin(SSD1306_SWITCHCAPVCC)) {
+        Serial.println("[ERROR] OLED initialization failed!");
+    } else {
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setTextColor(SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.println("Initializing...");
+        display.display();
+    }
+    
+    // Initialize MPU9250
+    Serial.println("[MPU] Initializing MPU9250...");
+    mpu.begin(21, 22);
     
     // Initialize SIM
     simSerial.begin(SIM_BAUD, SERIAL_8N1, SIM_RX, SIM_TX);
@@ -146,12 +250,27 @@ void setup() {
     Serial.println("  'help'     → Show instructions");
     
     lastSMSCheck = millis();
+
+    lastDisplayUpdate = millis();
+    updateDisplay();
 }
 
 void loop() {
+    // Update MPU data
+    mpu.update();
+    
+    // Check for violations
+    checkViolation();
+    
     // Process GPS if active
     if (gps.isRunning()) {
         gps.process();
+    }
+    
+    // Update display periodically (10Hz)
+    if (millis() - lastDisplayUpdate >= 100) {
+        updateDisplay();
+        lastDisplayUpdate = millis();
     }
     
     // Check for new SMS periodically
@@ -164,6 +283,5 @@ void loop() {
         lastSMSCheck = millis();
     }
     
-    delay(100);
+    delay(50);  // Reduced delay for faster MPU updates
 }
-

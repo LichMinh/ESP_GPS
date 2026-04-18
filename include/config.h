@@ -13,6 +13,15 @@
 #define SIM_TX 27
 #define SIM_BAUD 115200
 
+// OLED pins
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_MOSI 23
+#define OLED_CLK  18
+#define OLED_DC   4
+#define OLED_CS   5
+#define OLED_RST  19
+
 // Home coordinates (Change home address)
 const float HOME_LAT = 11.011160;
 const float HOME_LON = 77.013080;
