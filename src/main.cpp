@@ -46,19 +46,32 @@ void updateDisplay() {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
+    
+    // === THÊM TIÊU ĐỀ ===
     display.setCursor(0, 0);
+    display.setTextSize(1);
+    display.print("GPS - Tracker");
     
-    // Display MPU data
-    display.print("Roll: ");
-    display.println(mpu.getRoll(), 1);
+    // Kẻ gạch chân tiêu đề (tùy chọn)
+    display.drawLine(0, 9, 128, 9, SSD1306_WHITE);
+    // ====================
     
-    display.print("Pitch: ");
-    display.println(mpu.getPitch(), 1);
+    // Display MPU data 
+    display.setCursor(0, 12);  
+    display.print("AccelX: ");
+    display.println(mpu.getAccelX(), 2);
     
+    display.setCursor(0, 20);  
+    display.print("AccelY: ");
+    display.println(mpu.getAccelY(), 2);
+    
+    
+    display.setCursor(0, 36);  
     display.print("Score: ");
     display.println(score);
     
     // Display GPS status if active
+    display.setCursor(0, 36);  
     if (gps.isRunning()) {
         display.print("GPS: ");
         if (gps.hasFix()) {
@@ -73,7 +86,7 @@ void updateDisplay() {
     
     if (score == 0) {
         display.setTextSize(2);
-        display.setCursor(10, 40);
+        display.setCursor(10, 48);  
         display.print("WARNING!");
         display.setTextSize(1);
         
@@ -87,8 +100,8 @@ void updateDisplay() {
 }
 
 void checkViolation() {
-    float ax = mpu.getAx();
-    float ay = mpu.getAy();
+    float ax = mpu.getAccelX();
+    float ay = mpu.getAccelY();
     
     if ((ax > 0.5 || ax < -0.5 || abs(ay) > 0.5) &&
         (millis() - lastViolationTime > 1000)) {

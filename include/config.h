@@ -21,10 +21,10 @@
 #define OLED_DC   4
 #define OLED_CS   5
 #define OLED_RST  19
-// MPU pins
-#define MPU_SDA 21
-#define MPU_SCL 22
 
+// MPU pins
+// #define MPU_SDA 21
+// #define MPU_SCL 22
 
 // Home coordinates (Change home address)
 const float HOME_LAT = 11.011160;
