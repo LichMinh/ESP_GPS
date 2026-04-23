@@ -22,6 +22,13 @@
 #define OLED_CS   5
 #define OLED_RST  19
 
+// LED và còi pins
+const int LED_GREEN = 14;   // Đèn xanh - đủ điểm
+const int LED_RED = 13;     // Đèn đỏ - hết điểm
+const int LED_YELLOW = 25;  // Đèn vàng - cảnh báo trừ điểm
+const int BUZZER = 32;      // Còi - khi hết điểm
+const int RESET_BTN = 33;   // Nút reset điểm về 5
+
 // MPU pins
 // #define MPU_SDA 21
 // #define MPU_SCL 22
